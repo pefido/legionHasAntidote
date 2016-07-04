@@ -11,6 +11,8 @@ var ALMap = require('./../shared/ALMap.js').ALMap;
 
 var CRDT = require('./../shared/crdt.js').CRDT;
 
+var antidoteClient = require('./antidoteClient.js');
+
 var CRDT_LIB = {};
 CRDT_LIB.STATE_Counter = require('./../shared/crdtLib/stateCounter.js').STATE_Counter;
 CRDT_LIB.OP_ORSet = require('./../shared/crdtLib/opSet.js').OP_ORSet;
@@ -83,6 +85,7 @@ function initService() {
                         //Only on PSA will the objects have the client's changes.
                         type: "OS:PS", callback: function (message) {
                             //util.log("AA1" + JSON.stringify(message));
+                            antidoteClient.treatMessage(message, db);
                             ps.handleSync(message);
                             ps.sync();
                         }
@@ -90,18 +93,20 @@ function initService() {
                     peerSyncAnswer: {
                         type: "OS:PSA", callback: function (message) {
                             //util.log("AA2" + JSON.stringify(message));
-                            ps.handleSyncAnswer(message);
+                            ps.handleSyncAnswer(message, db);
                         }
                     },
                     gotContentFromNetwork: {
                         type: "OS:C", callback: function (message, original, connection) {
                             //util.log("AA3" + JSON.stringify(message));
+                            antidoteClient.treatMessage(message, db);
                             db.gotContentFromNetwork(message, original, connection);
                         }
                     },
                     version_vector_propagation: {
                         type: "OS:VVP", callback: function (message, original, connection) {
                             //util.log("AA4" + JSON.stringify(message));
+                            antidoteClient.treatMessage(message, db);
                             db.gotVVFromNetwork(message, original, connection);
                         }
                     }
@@ -125,12 +130,16 @@ function initService() {
                             }
 
                             if (parsed.type == db.handlers.peerSync.type) {
+                                console.log("peerSync");
                                 db.handlers.peerSync.callback(parsed, original, socket);
                             } else if (parsed.type == db.handlers.peerSyncAnswer.type) {
+                                console.log("peerSyncAnswer");
                                 db.handlers.peerSyncAnswer.callback(parsed, original, socket);
                             } else if (parsed.type == db.handlers.gotContentFromNetwork.type) {
+                                console.log("contentFromNetwork");
                                 db.handlers.gotContentFromNetwork.callback(parsed, original, socket);
                             } else if (parsed.type == db.handlers.version_vector_propagation.type) {
+                                console.log("versionVectorProp");
                                 db.handlers.version_vector_propagation.callback(parsed, original, socket);
                             } else {
                                 util.error("Unkown message type.");

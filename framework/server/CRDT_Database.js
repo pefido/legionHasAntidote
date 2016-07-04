@@ -256,6 +256,7 @@ CRDT_Database.prototype.gotContentFromNetwork = function (message, original, con
         case "STATE":
             var objectID = message.content.objectID;
             var crdt = this.getCRDT(objectID);
+          //console.log(crdt);
             crdt.stateFromNetwork(crdt.fromJSONString(message.content.msg.state), connection, original);
             break;
         case "DELTA":
@@ -296,7 +297,7 @@ CRDT_Database.prototype.gotVVFromNetwork = function (message, original, connecti
         if (objectsDebug) {
             console.log("Peer is missing ops.");
         }
-        var operations = crdt.getOperations(vvDiff.vv2.missing)
+        var operations = crdt.getOperations(vvDiff.vv2.missing);
         var answer = {
             type: "OPLIST",
             objectID: objectID,

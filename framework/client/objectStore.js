@@ -110,7 +110,7 @@ ObjectStore.prototype.gotVVFromNetwork = function (message, original) {
         return;
     }
 
-    var vvDiff = CRDT.versionVectorDiff(crdt.getVersionVector(), hisVV);
+    var vvDiff = crdt.versionVectorDiff(crdt.getVersionVector(), hisVV);
 
     var os = this;
     if (Object.keys(vvDiff.vv2.missing).length > 0) {
@@ -118,6 +118,7 @@ ObjectStore.prototype.gotVVFromNetwork = function (message, original) {
             console.log("Peer is missing ops.");
         }
         var operations = crdt.getOperations(vvDiff.vv2.missing);
+        console.log(operations);
         var answer = {
             type: "OPLIST",
             objectID: objectID,
