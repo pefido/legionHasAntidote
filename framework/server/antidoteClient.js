@@ -5,7 +5,10 @@ if (typeof exports != "undefined") {
 }
 
 const http = require('http');
+var dcid = [];
+var firstTime = true;
 var sentOps = {};
+var lastSeenTimestamp = 0;
 
 /**
  * ping antidote
@@ -363,6 +366,8 @@ function addToSet(bType, bucket, key, additions) {
   xhttp.send(data);
 }
 
+/******************Send operations from legion to Antidote******************/
+
 function treatMessage(message, db) {
 
   switch(message.type) {
@@ -379,8 +384,12 @@ function treatMessage(message, db) {
           //console.log(message.content.operations);
           switch(message.content.operations[0].opName) {
             case 'add':
-              return updateObjects(message.content.objectID, 'crdt_orset', 'add', message.content.operations[0].result.element);
+                //return updateObjects(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element);
+                return updateObjectsSnapshot(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
               break;
+            case 'remove':
+              return updateObjectsSnapshot(message.content .objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
+            break;
           }
           break;
 
@@ -418,6 +427,13 @@ function getObjects(key, type) {
     });
     response.on('end', function() {
       console.log(body);
+      if(firstTime){
+        let jsonBody = JSON.parse(body);
+        dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
+        console.log(dcid);
+        lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+        firstTime = false;
+      }
       return body;
     });
   });
@@ -447,6 +463,44 @@ function updateObjects(key, type, op, elements) {
       console.log(jsonResp);
       let commitTime = jsonResp.success.commit_resp.vectorclock[0].dcid_and_time[1];
       console.log(commitTime);
+      //sentOps.push(commitTime);
+      //commitTime += "";
+      sentOps[commitTime] = jsonResp;
+      console.log(sentOps);
+      return jsonResp;
+    });
+  });
+
+  req.write(data);
+  req.end();
+}
+
+function updateObjectsSnapshot(key, type, op, elements, vClock) {
+  var data = JSON.stringify({
+    key: key,
+    type: type,
+    op: op,
+    elements: elements,
+    vClock: vClock
+  });
+
+  let req = http.request({
+    host: 'localhost',
+    port: 8088,
+    path: '/updateObjects',
+    method: 'PUT'
+  }, function(response) {
+    let body = '';
+    response.on('data', function(chunk) {
+      body += chunk;
+    });
+    response.on('end', function() {
+      //console.log(body);
+      let jsonResp = JSON.parse(body);
+      console.log(jsonResp);
+      let commitTime = jsonResp.success.commit_resp.vectorclock[0].dcid_and_time[1];
+      console.log(commitTime);
+      lastSeenTimestamp = commitTime + 1;
       //sentOps.push(commitTime);
       //commitTime += "";
       sentOps[commitTime] = jsonResp;
@@ -495,8 +549,9 @@ function getLastCommitTimestamp() {
   xhttp.send();
 }
 
-/******************fetch updates from antidotes from time to time******************/
+/******************fetch updates from antidote from time to time******************/
 
+getObjects('objectID2', 'crdt_orset');
 setTimeout(function(){setInterval(function(){
 
 }, 2000)}, 4500);

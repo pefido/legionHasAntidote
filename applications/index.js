@@ -155,15 +155,15 @@ function add(num) {
     //op_map.set(rand, newRandomValue());
 }
 
-function remove() {
+function remove(num) {
     if (!legion) {
         console.warn("Use start first.");
         return;
     }
     console.log("Removing.");
-    var rem = op_set.getValue()[0];
-    if (rem)
-        op_set.remove(rem);
+    /*var rem = op_set.getValue()[0];
+    if (rem)*/
+        op_set.remove(num);
     //counter_state.decrement(legion.id, 1);
 
     /*var state_set_rem = state_set.getValue()[0];
