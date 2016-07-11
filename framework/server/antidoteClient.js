@@ -8,6 +8,7 @@ const http = require('http');
 var dcid = [];
 var firstTime = true;
 var sentOps = {};
+var tokensLegionToAntidote = {};
 var lastSeenTimestamp = 0;
 
 /**
@@ -373,7 +374,7 @@ function treatMessage(message, db) {
   switch(message.type) {
     case 'OS:C':
       let crdtType = db.getCRDT(message.content.objectID).crdt.type;
-      console.log("crdt type: " + crdtType);
+      console.log(JSON.stringify(message));
       //console.log(message);
       switch(crdtType) {
         case 'STATE_Counter':
@@ -384,11 +385,11 @@ function treatMessage(message, db) {
           //console.log(message.content.operations);
           switch(message.content.operations[0].opName) {
             case 'add':
-                //return updateObjects(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element);
-                return updateObjectsSnapshot(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
+              //return updateObjects(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element);
+              return updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'add', message.content.operations[0].result.element, message.content.operations[0].result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
               break;
             case 'remove':
-              return updateObjectsSnapshot(message.content .objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
+              return updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]);
             break;
           }
           break;
@@ -460,13 +461,13 @@ function updateObjects(key, type, op, elements) {
     response.on('end', function() {
       //console.log(body);
       let jsonResp = JSON.parse(body);
-      console.log(jsonResp);
+      //console.log(jsonResp);
       let commitTime = jsonResp.success.commit_resp.vectorclock[0].dcid_and_time[1];
-      console.log(commitTime);
+      //console.log(commitTime);
       //sentOps.push(commitTime);
       //commitTime += "";
       sentOps[commitTime] = jsonResp;
-      console.log(sentOps);
+      //console.log(sentOps);
       return jsonResp;
     });
   });
@@ -475,8 +476,8 @@ function updateObjects(key, type, op, elements) {
   req.end();
 }
 
-function updateObjectsSnapshot(key, type, op, elements, vClock) {
-  var data = JSON.stringify({
+function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
+  let data = JSON.stringify({
     key: key,
     type: type,
     op: op,
@@ -497,14 +498,16 @@ function updateObjectsSnapshot(key, type, op, elements, vClock) {
     response.on('end', function() {
       //console.log(body);
       let jsonResp = JSON.parse(body);
-      console.log(jsonResp);
+      //console.log(jsonResp);
       let commitTime = jsonResp.success.commit_resp.vectorclock[0].dcid_and_time[1];
-      console.log(commitTime);
-      lastSeenTimestamp = commitTime + 1;
+      //console.log(commitTime);
+      //lastSeenTimestamp = commitTime + 1;
       //sentOps.push(commitTime);
-      //commitTime += "";
       sentOps[commitTime] = jsonResp;
-      console.log(sentOps);
+      //console.log(sentOps);
+
+      //fazer correspondencia de token
+      getLogOps(key, type, vClock, ['token', commitTime, tokens, op]);
       return jsonResp;
     });
   });
@@ -515,20 +518,35 @@ function updateObjectsSnapshot(key, type, op, elements, vClock) {
 
 /******************Log Operations******************/
 
-function getLogOps(key, type, vClock) {
-  var data = '/' + key + '/' + type + '/' + vClock;
+function getLogOps(key, type, vClock, next) {
+  var data = '/' + key + '/' + type + '/' + JSON.stringify(vClock);
   http.get({
     host: 'localhost',
     port: 8088,
-    path: '//getLogOps' + data
+    path: '/getLogOps' + data
   }, function(response) {
     let body = '';
     response.on('data', function(chunk) {
       body += chunk;
     });
     response.on('end', function() {
+      console.log("aqui");
       console.log(body);
-      return body;
+      let jsonResp = JSON.parse(body);
+      switch (next[0]) {
+        case 'token':
+          let ops = jsonResp.success.get_log_operations_resp[0].log_operations;
+          let found = false;
+          for(i=0; i<ops.length; i++) {
+            if(ops[i].opid_and_payload[1].clocksi_payload[4].commit_time[1] == next[1]) {
+              if(next[3] == 'add')
+                tokensLegionToAntidote[next[2]] = ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
+              break;
+            }
+          }
+          console.log(JSON.stringify(tokensLegionToAntidote));
+      }
+      return jsonResp;
     });
   });
 }

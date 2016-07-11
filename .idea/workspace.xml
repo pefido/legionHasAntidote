@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="fc4d3c89-fe33-4a09-a298-03c97b587409" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/applications/index.js" afterPath="$PROJECT_DIR$/applications/index.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/framework/server/antidoteClient.js" afterPath="$PROJECT_DIR$/framework/server/antidoteClient.js" />
     </list>
     <ignored path="Legion.iws" />
@@ -48,7 +47,7 @@
         <entry file="file://$PROJECT_DIR$/framework/server/ObjectsServer.js">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="108" column="58" selection-start-line="108" selection-start-column="58" selection-end-line="108" selection-end-column="58" />
+              <caret line="108" column="38" selection-start-line="108" selection-start-column="38" selection-end-line="108" selection-end-column="38" />
               <folding />
             </state>
           </provider>
@@ -57,8 +56,8 @@
       <file leaf-file-name="antidoteClient.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/framework/server/antidoteClient.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="1.7060109">
-              <caret line="551" column="46" selection-start-line="551" selection-start-column="46" selection-end-line="551" selection-end-column="46" />
+            <state vertical-scroll-proportion="0.41530055">
+              <caret line="542" column="47" selection-start-line="542" selection-start-column="47" selection-end-line="542" selection-end-column="47" />
               <folding />
             </state>
           </provider>
@@ -752,14 +751,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/framework/server/ObjectsServer.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="108" column="58" selection-start-line="108" selection-start-column="58" selection-end-line="108" selection-end-column="58" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/applications/index.js">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -768,10 +759,18 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/framework/server/ObjectsServer.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="108" column="38" selection-start-line="108" selection-start-column="38" selection-end-line="108" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/framework/server/antidoteClient.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="1.7060109">
-          <caret line="551" column="46" selection-start-line="551" selection-start-column="46" selection-end-line="551" selection-end-column="46" />
+        <state vertical-scroll-proportion="0.41530055">
+          <caret line="542" column="47" selection-start-line="542" selection-start-column="47" selection-end-line="542" selection-end-column="47" />
           <folding />
         </state>
       </provider>
