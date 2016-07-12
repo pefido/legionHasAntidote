@@ -9,6 +9,7 @@ var dcid = [];
 var firstTime = true;
 var sentOps = {};
 var tokensLegionToAntidote = {};
+var storedObjects = {};
 var lastSeenTimestamp = 0;
 var lastCommitTimestamp = 0;
 
@@ -480,7 +481,10 @@ function updateObjects(key, type, op, elements) {
 
 function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
   if( ((!(tokens in tokensLegionToAntidote)) && op == 'add')  ||  (tokens in tokensLegionToAntidote && op == 'remove') ) {
-    console.log("lets " + op);
+    if(!(key in storedObjects)) {
+      storedObjects[key] = type;
+      //console.log(JSON.stringify(storedObjects));
+    }
 
     let data = JSON.stringify({
       key: key,
@@ -526,6 +530,7 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
 /******************Log Operations******************/
 
 function getLogOps(key, type, vClock, next) {
+  //console.log('vlock; ' + vClock);
   var data = '/' + key + '/' + type + '/' + JSON.stringify(vClock);
   http.get({
     host: 'localhost',
@@ -537,8 +542,8 @@ function getLogOps(key, type, vClock, next) {
       body += chunk;
     });
     response.on('end', function() {
-      console.log("aqui");
-      console.log(body);
+      //console.log("aqui");
+      //console.log(body);
       let jsonResp = JSON.parse(body);
       switch (next[0]) {
         case 'token':
@@ -555,9 +560,16 @@ function getLogOps(key, type, vClock, next) {
                 else console.log("unique token doesnt exist");
               }
               break;
+
             }
           }
           console.log(JSON.stringify(tokensLegionToAntidote));
+          break;
+        case 'sync':
+          //console.log('YO');
+          console.log(JSON.stringify(jsonResp));
+          //ver se a operação está nos sendOps, se nao está, fazer no legion
+          break;
       }
       return jsonResp;
     });
@@ -584,5 +596,9 @@ function getLastCommitTimestamp() {
 
 getObjects('objectID2', 'crdt_orset');
 setTimeout(function(){setInterval(function(){
-
-}, 2000)}, 4500);
+  Object.keys(storedObjects).forEach(function(key, index) {
+    //console.log('key: ' + key + '; value: ' + storedObjects[key]);
+    //console.log(lastSeenTimestamp);
+    getLogOps(key, storedObjects[key], [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp], ['sync']);
+  });
+}, 4000)}, 4500);
