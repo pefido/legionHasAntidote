@@ -6,6 +6,7 @@ if (typeof exports != "undefined") {
 
 const http = require('http');
 var dcid = [];
+var legionDb;
 var firstTime = true;
 var sentOps = {};
 var tokensLegionToAntidote = {};
@@ -372,6 +373,10 @@ function addToSet(bType, bucket, key, additions) {
 /******************Send operations from legion to Antidote******************/
 
 function treatMessage(message, db) {
+  if(firstTime) {
+    legionDb = db;
+    firstTime = false;
+  }
 
   switch(message.type) {
     case 'OS:C':
@@ -436,7 +441,6 @@ function getObjects(key, type) {
         console.log(dcid);
         lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
         lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-        firstTime = false;
       }
       return body;
     });
@@ -569,6 +573,20 @@ function getLogOps(key, type, vClock, next) {
           //console.log('YO');
           console.log(JSON.stringify(jsonResp));
           //ver se a operação está nos sendOps, se nao está, fazer no legion
+          let logOps = jsonResp.success.get_log_operations_resp[0].log_operations;
+          console.log(sentOps);
+          Object.keys(logOps).forEach(function(key, index, array) {
+            if( !(logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] in sentOps) ){//guardar tokens
+              console.log('fazer \n' + JSON.stringify(logOps[key].opid_and_payload[1].clocksi_payload[2].update));
+              let obj = legionDb.getCRDT(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
+              if('add' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
+                obj.add(logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[0].json_value);
+
+              }
+            }
+            if(index === array.length - 1)
+              lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
+          });
           break;
       }
       return jsonResp;
