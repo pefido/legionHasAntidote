@@ -397,7 +397,8 @@ function treatMessage(message, db) {
               getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'add', message.content.operations[0].result.element, message.content.operations[0].result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
               break;
             case 'remove':
-              return updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]);
+              //updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]);
+              getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
               break;
           }
           break;
@@ -472,17 +473,15 @@ function getObjects(key, type, next) {
           }
           break;
         case 'sync':
-          let sentOps;
-          let tokensLegionAntidote;
           if(key == 'sentOps') {
             let next2 = next;
             next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-            getLogOps(next2[2], type, next2[1], [next[0], next[3], next[4]]);//alterar o getLogOps conforme!!!!
+            getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
           }
           else {
             let next1 = next;
             next1[2] = key;
-            next[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+            next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
             getObjects('sentOps', type, next1);
           }
 
@@ -609,8 +608,7 @@ function getLogOps(key, type, vClock, next) {
               }
               else if (next[3] == 'remove') {
                 //delete tokensLegionToAntidote[next[2]];
-                //falta remover!!!!!!!!!!!!!!
-                //updateObjects(key + '_tokens', 'crdt_orset', 'remove', )
+                updateObjects(key + '_tokens', 'crdt_orset', 'remove', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.remove[1][0].binary64);
               }
               break;
 
@@ -628,13 +626,15 @@ function getLogOps(key, type, vClock, next) {
           else {
             let sentOps = {};
             let tokensLegionToAntidote = {};
-            next[4].forEach(function(element, index, array) {
+            next[2].forEach(function(element, index, array) {
               sentOps[element.element[0].json_value] = element.element[0].json_value;
             });
-            next[3].forEach(function(element, index, array) {
+            next[1].forEach(function(element, index, array) {
               let tokens = element.element[0].json_value.split(" ");
-              sentOps[tokens[0]] = tokens[1];
+              tokensLegionToAntidote[tokens[0]] = tokens[1];
             });
+            console.log('tokens:');
+            console.log(JSON.stringify(tokensLegionToAntidote));
 
             //let sentOps = next[4];
             //let tokensLegionToAntidote = next[3];
@@ -642,7 +642,7 @@ function getLogOps(key, type, vClock, next) {
               if (!(logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] in sentOps)) {
                 console.log('fazer \n' + JSON.stringify(logOps[key].opid_and_payload[1].clocksi_payload[2].update));
                 updateObjects('sentOps', type, 'add', logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]);
-                sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]] = logOps[key].opid_and_payload;
+                //sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]] = logOps[key].opid_and_payload;
                 let obj = legionDb.getCRDT(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
                 if ('add' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
                   obj.add(logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[0].json_value);
@@ -651,7 +651,7 @@ function getLogOps(key, type, vClock, next) {
                   //console.log(opHist);
                   //console.log(JSON.stringify(obj.opHistory.map.ObjectServer.map[opHist[opHist.length-1]].result.unique));
                   let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique + " " + logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
-                  updateObjects(key + '_tokens', type, 'add', token);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'add', token);
                   //tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique] = logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
                 }
                 else if ('remove' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
@@ -659,8 +659,12 @@ function getLogOps(key, type, vClock, next) {
                   obj.remove(logOps[key].opid_and_payload[1].clocksi_payload[2].update.remove[0].json_value);
                   console.log(JSON.stringify(obj.opHistory.map.ObjectServer.map));
                   let opHist = Object.keys(obj.opHistory.map.ObjectServer.map);
-                  let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0] + " " + tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
-                  updateObjects(key + '_tokens', type, 'remove', token);
+                  console.log('token to remove : ' + obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]);
+                  let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0] + ' ' + tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
+                  console.log('token: ' + token);
+                  console.log('key: ' + logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'remove', token);
+                  //console.log('token: ' + token);
                   //delete tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
                 }
               }
@@ -701,9 +705,9 @@ setTimeout(function(){setInterval(function(){
     //getLogOps(key, storedObjects[key], [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp], ['sync']);
     //usar o de baixo
     getObjects(key, storedObjects[key], ['sync', [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]]);
-    console.log('sentOps:');
+    //console.log('sentOps:');
     //console.log(sentOps);
-    console.log('tokensLegionToAntidote');
+    //console.log('tokensLegionToAntidote:');
     //console.log(JSON.stringify(tokensLegionToAntidote));
   });
 }, 4000)}, 4500);
