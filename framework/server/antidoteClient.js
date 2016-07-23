@@ -5,6 +5,7 @@ if (typeof exports != "undefined") {
 }
 
 const http = require('http');
+zookeeper = require('node-zookeeper-client');
 var dcid = [];
 var legionDb;
 var firstTime = true;
@@ -13,6 +14,24 @@ var tokensLegionToAntidote = {};
 var storedObjects = {};
 var lastSeenTimestamp = 0;
 var lastCommitTimestamp = 0;
+
+var zooClient = zookeeper.createClient('localhost:2181');
+
+zooClient.once('connected', function () {
+  console.log('Connected to the zoo.');
+
+  /*client.create(path, function (error) {
+    if (error) {
+      console.log('Failed to create node: %s due to: %s.', path, error);
+    } else {
+      console.log('Node: %s is successfully created.', path);
+    }
+
+    client.close();
+  });*/
+});
+
+zooClient.connect();
 
 /**
  * ping antidote
@@ -425,69 +444,77 @@ function treatMessage(message, db) {
 /******************Object Operations******************/
 
 function getObjects(key, type, next) {
+
   if(next[0] == 'checkAndUpdate' || (next[0] == 'sync' && key != 'sentOps'))
     var data = '/' + key + '_tokens' + '/' + type;
   else var data = '/' + key + '/' + type;
-  http.get({
-    host: 'localhost',
-    port: 8088,
-    path: '/getObjects' + data
-  }, function(response) {
-    let body = '';
-    response.on('data', function(chunk) {
-      body += chunk;
-    });
-    response.on('end', function() {
-      //console.log(body);
-      let jsonBody = JSON.parse(body);
 
-      switch (next[0]) {
-        case 'firstTime':
-          dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
-          console.log(dcid);
-          lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-          lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-          break;
-        case 'updateTime':
-          lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-          lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-          break;
-        case 'checkAndUpdate':
-          //ver se o token já lá está
-          let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-          let found = false;
-          tokens.forEach(function(element, index, array) {
-            let token = element.element[0].json_value.split(" ");
-            if(token[0] == next[3])
-              found = true;
-          });
-          if(next[1] == 'add') {
-            if(!found)
-              updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
-            else console.log('duplicated add operation');
-          }
-          else if(next[1] == 'remove') {
-            if(found)
-              updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
-            else console.log('duplicated remove operation');
-          }
-          break;
-        case 'sync':
-          if(key == 'sentOps') {
-            let next2 = next;
-            next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-            getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
-          }
-          else {
-            let next1 = next;
-            next1[2] = key;
-            next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-            getObjects('sentOps', type, next1);
-          }
+  zooExists('/' + key, function() {
+    zooCreate('/' + key, function() {
 
-          break;
-      }
-      return body;
+      http.get({
+        host: 'localhost',
+        port: 8088,
+        path: '/getObjects' + data
+      }, function(response) {
+        let body = '';
+        response.on('data', function(chunk) {
+          body += chunk;
+        });
+        response.on('end', function() {
+          //console.log(body);
+          let jsonBody = JSON.parse(body);
+
+          switch (next[0]) {
+            case 'firstTime':
+              dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
+              console.log(dcid);
+              lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+              lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+              break;
+            case 'updateTime':
+              lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+              lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+              break;
+            case 'checkAndUpdate':
+              //ver se o token já lá está
+              let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+              let found = false;
+              tokens.forEach(function(element, index, array) {
+                let token = element.element[0].json_value.split(" ");
+                if(token[0] == next[3])
+                  found = true;
+              });
+              if(next[1] == 'add') {
+                if(!found)
+                  updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                else console.log('duplicated add operation');
+              }
+              else if(next[1] == 'remove') {
+                if(found)
+                  updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                else console.log('duplicated remove operation');
+              }
+              break;
+            case 'sync':
+              if(key == 'sentOps') {
+                let next2 = next;
+                next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+                getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
+              }
+              else {
+                let next1 = next;
+                next1[2] = key;
+                next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+                getObjects('sentOps', type, next1);
+              }
+
+              break;
+          }
+          return body;
+        });
+      });
+
     });
   });
 }
@@ -694,6 +721,118 @@ function getLastCommitTimestamp() {
   xhttp.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
   xhttp.send();
 }
+
+/******************zooKeeper functions******************/
+function deleteNode(path) {
+  zooClient.remove(path, -1, function (error) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+
+    console.log('Node is deleted.');
+  });
+}
+
+/*function getKids(lock1, path) {
+  let haveLock = lock1;
+  if(!haveLock) {
+    zooClient.getChildren('/locks', function (error, children, stats) {
+      console.log('aqui');
+      if (error) {
+        console.log(error.stack);
+        return;
+      }
+      console.log('Children are: %j.', children);
+      let lowest = children[0].substring(10);
+      children.forEach(function (element) {
+        let number = element.substring(10);
+        if (parseInt(number) < parseInt(lowest))
+          lowest = number;
+      });
+      let myNumber = path.substring(17);
+      console.log('lowest: ' + lowest);
+      console.log('myNumber: ' + myNumber);
+      if (myNumber == lowest) {
+        console.log('I have lock');
+        haveLock = true;
+      }
+
+      if (!haveLock) {
+        zooClient.exists('/locks/guid-lock-' + lowest, function (event) {
+          console.log('Got watcher event: %s', event);
+          if(event.getType() == 2 && event.getPath().substring(17) == lowest) {
+            getKids(false, path);
+          }
+        }, function (error, stat) {
+          if (error) {
+            console.log(error.stack);
+            return;
+          }
+
+          if (stat) {
+            console.log('Node exists.');
+          } else {
+            console.log('Node does not exist.');
+          }
+        });
+      }
+      else {
+        deleteNode(path);
+      }
+    });
+  }
+}*/
+
+function zooExists(path, callback) {
+  zooClient.exists(path, function (error, stat) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+
+    if (stat) {
+      console.log('Node exists.');
+    } else {
+      console.log('Node does not exist.');
+      callback();
+    }
+  });
+}
+
+function zooCreate(path, callback) {
+  zooClient.create(
+    path,
+    new Buffer('data'),
+    function (error, path) {
+      if (error) {
+        console.log(error.stack);
+        return;
+      }
+      console.log('Node: %s is created.', path);
+      callback();
+    }
+  );
+}
+
+  /*zooClient.create(
+    '/locks/guid-lock-',
+    new Buffer('data'),
+    zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL,
+    function (error, path) {
+      if (error) {
+        console.log(error.stack);
+        return;
+      }
+
+      console.log('Node: %s is created.', path);
+
+      var haveLock = false;
+        getKids(haveLock, path);
+    }
+  );*/
+
+
 
 /******************fetch updates from antidote from time to time******************/
 
