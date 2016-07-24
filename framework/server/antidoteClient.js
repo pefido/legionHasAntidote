@@ -452,66 +452,69 @@ function getObjects(key, type, next) {
   zooExists('/' + key, function() {
     zooCreate('/' + key, function() {
 
-      http.get({
-        host: 'localhost',
-        port: 8088,
-        path: '/getObjects' + data
-      }, function(response) {
-        let body = '';
-        response.on('data', function(chunk) {
-          body += chunk;
-        });
-        response.on('end', function() {
-          //console.log(body);
-          let jsonBody = JSON.parse(body);
+      zooCreateEfem('/' + key + '/' + key, function() {
+        http.get({
+          host: 'localhost',
+          port: 8088,
+          path: '/getObjects' + data
+        }, function(response) {
+          let body = '';
+          response.on('data', function(chunk) {
+            body += chunk;
+          });
+          response.on('end', function() {
+            //console.log(body);
+            let jsonBody = JSON.parse(body);
 
-          switch (next[0]) {
-            case 'firstTime':
-              dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
-              console.log(dcid);
-              lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-              lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-              break;
-            case 'updateTime':
-              lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-              lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
-              break;
-            case 'checkAndUpdate':
-              //ver se o token já lá está
-              let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-              let found = false;
-              tokens.forEach(function(element, index, array) {
-                let token = element.element[0].json_value.split(" ");
-                if(token[0] == next[3])
-                  found = true;
-              });
-              if(next[1] == 'add') {
-                if(!found)
-                  updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
-                else console.log('duplicated add operation');
-              }
-              else if(next[1] == 'remove') {
-                if(found)
-                  updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
-                else console.log('duplicated remove operation');
-              }
-              break;
-            case 'sync':
-              if(key == 'sentOps') {
-                let next2 = next;
-                next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-                getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
-              }
-              else {
-                let next1 = next;
-                next1[2] = key;
-                next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-                getObjects('sentOps', type, next1);
-              }
+            switch (next[0]) {
+              case 'firstTime':
+                dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
+                console.log(dcid);
+                lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                break;
+              case 'updateTime':
+                lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                break;
+              case 'checkAndUpdate':
+                //ver se o token já lá está
+                let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+                let found = false;
+                tokens.forEach(function(element, index, array) {
+                  let token = element.element[0].json_value.split(" ");
+                  if(token[0] == next[3])
+                    found = true;
+                });
+                if(next[1] == 'add') {
+                  if(!found)
+                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                  else console.log('duplicated add operation');
+                }
+                else if(next[1] == 'remove') {
+                  if(found)
+                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                  else console.log('duplicated remove operation');
+                }
+                break;
+              case 'sync':
+                if(key == 'sentOps') {
+                  let next2 = next;
+                  next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+                  getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
+                }
+                else {
+                  let next1 = next;
+                  next1[2] = key;
+                  next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
+                  getObjects('sentOps', type, next1);
+                }
 
-              break;
-          }
-          return body;
+                break;
+            }
+            return body;
+
+          })
         });
       });
 
@@ -734,55 +737,34 @@ function deleteNode(path) {
   });
 }
 
-/*function getKids(lock1, path) {
-  let haveLock = lock1;
-  if(!haveLock) {
-    zooClient.getChildren('/locks', function (error, children, stats) {
-      console.log('aqui');
-      if (error) {
-        console.log(error.stack);
-        return;
-      }
-      console.log('Children are: %j.', children);
-      let lowest = children[0].substring(10);
-      children.forEach(function (element) {
-        let number = element.substring(10);
-        if (parseInt(number) < parseInt(lowest))
-          lowest = number;
-      });
-      let myNumber = path.substring(17);
-      console.log('lowest: ' + lowest);
-      console.log('myNumber: ' + myNumber);
-      if (myNumber == lowest) {
-        console.log('I have lock');
-        haveLock = true;
-      }
+function zooGetChildren(path, callback) {
+  let nodes = path.split('/');
+  zooClient.getChildren('/' + nodes[1], function (error, children, stats) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+    console.log('Children are: %j.', children);
+    //callback();
+    zooGetLock(path, children, callback);
+  });
+}
 
-      if (!haveLock) {
-        zooClient.exists('/locks/guid-lock-' + lowest, function (event) {
-          console.log('Got watcher event: %s', event);
-          if(event.getType() == 2 && event.getPath().substring(17) == lowest) {
-            getKids(false, path);
-          }
-        }, function (error, stat) {
-          if (error) {
-            console.log(error.stack);
-            return;
-          }
-
-          if (stat) {
-            console.log('Node exists.');
-          } else {
-            console.log('Node does not exist.');
-          }
-        });
-      }
-      else {
-        deleteNode(path);
-      }
-    });
+function zooGetLock(path, children, callback) {
+  let myNumber = path.substr(path.length - 10);
+  let lowest = children[0].substr(children[0].length - 10);
+  console.log('lowest: ' + myNumber);
+  children.forEach(function(element) {
+    if(parseInt(element.substr(element.length - 10)) < parseInt(lowest))
+      lowest = element.substr(element.length - 10)
+  });
+  if(lowest == myNumber) {
+    callback();
   }
-}*/
+  else {
+    zooExistsNotify(path, zooGetChildren(path, callback));
+  }
+}
 
 function zooExists(path, callback) {
   zooClient.exists(path, function (error, stat) {
@@ -800,6 +782,27 @@ function zooExists(path, callback) {
   });
 }
 
+function zooExistsNotify(path, callback) {
+  zooClient.exists(path, function (event) {
+    console.log('Got watcher event: %s', event);
+    if(event.getType() == 2 && event.getPath().substr(event.getPath().length - 10) == lowest) {
+      zooGetChildren(path, callback);
+    }
+  },function (error, stat) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+
+    if (stat) {
+      console.log('Node exists.');
+    } else {
+      console.log('Node does not exist.');
+      zooGetChildren(path, callback);
+    }
+  });
+}
+
 function zooCreate(path, callback) {
   zooClient.create(
     path,
@@ -811,6 +814,23 @@ function zooCreate(path, callback) {
       }
       console.log('Node: %s is created.', path);
       callback();
+    }
+  );
+}
+
+function zooCreateEfem(path, callback) {
+  zooClient.create(
+    path,
+    new Buffer('data'),
+    zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL,
+    function (error, path) {
+      if (error) {
+        console.log(error.stack);
+        return;
+      }
+      console.log('Node: %s is created.', path);
+      //callback();
+      zooGetChildren(path, callback);
     }
   );
 }
@@ -833,6 +853,56 @@ function zooCreate(path, callback) {
   );*/
 
 
+
+/*function getKids(lock1, path) {
+ let haveLock = lock1;
+ if(!haveLock) {
+ zooClient.getChildren('/locks', function (error, children, stats) {
+ console.log('aqui');
+ if (error) {
+ console.log(error.stack);
+ return;
+ }
+ console.log('Children are: %j.', children);
+ let lowest = children[0].substring(10);
+ children.forEach(function (element) {
+ let number = element.substring(10);
+ if (parseInt(number) < parseInt(lowest))
+ lowest = number;
+ });
+ let myNumber = path.substring(17);
+ console.log('lowest: ' + lowest);
+ console.log('myNumber: ' + myNumber);
+ if (myNumber == lowest) {
+ console.log('I have lock');
+ haveLock = true;
+ }
+
+ if (!haveLock) {
+ zooClient.exists('/locks/guid-lock-' + lowest, function (event) {
+ console.log('Got watcher event: %s', event);
+ if(event.getType() == 2 && event.getPath().substring(17) == lowest) {
+ getKids(false, path);
+ }
+ }, function (error, stat) {
+ if (error) {
+ console.log(error.stack);
+ return;
+ }
+
+ if (stat) {
+ console.log('Node exists.');
+ } else {
+ console.log('Node does not exist.');
+ }
+ });
+ }
+ else {
+ deleteNode(path);
+ }
+ });
+ }
+ }*/
 
 /******************fetch updates from antidote from time to time******************/
 
