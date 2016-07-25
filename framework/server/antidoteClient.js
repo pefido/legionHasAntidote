@@ -449,10 +449,9 @@ function getObjects(key, type, next) {
     var data = '/' + key + '_tokens' + '/' + type;
   else var data = '/' + key + '/' + type;
 
-  zooExists('/' + key, function() {
-    zooCreate('/' + key, function() {
+  zooExistsAndCreate('/' + key, function() {
 
-      zooCreateEfem('/' + key + '/' + key, function() {
+      zooCreateEfem('/' + key + '/' + key, function(lockNode) {
         http.get({
           host: 'localhost',
           port: 8088,
@@ -468,6 +467,7 @@ function getObjects(key, type, next) {
 
             switch (next[0]) {
               case 'firstTime':
+                unlockNode(lockNode);
                 dcid = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[0].dcid;
                 console.log(dcid);
                 lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
@@ -517,8 +517,6 @@ function getObjects(key, type, next) {
           })
         });
       });
-
-    });
   });
 }
 
@@ -739,12 +737,14 @@ function deleteNode(path) {
 
 function zooGetChildren(path, callback) {
   let nodes = path.split('/');
+  //console.log('path: ' + path);
+  //console.log('nodes: ' + nodes);
   zooClient.getChildren('/' + nodes[1], function (error, children, stats) {
     if (error) {
       console.log(error.stack);
       return;
     }
-    console.log('Children are: %j.', children);
+    //console.log('Children are: %j.', children);
     //callback();
     zooGetLock(path, children, callback);
   });
@@ -753,16 +753,19 @@ function zooGetChildren(path, callback) {
 function zooGetLock(path, children, callback) {
   let myNumber = path.substr(path.length - 10);
   let lowest = children[0].substr(children[0].length - 10);
-  console.log('lowest: ' + myNumber);
+  console.log('myNumber: ' + myNumber);
   children.forEach(function(element) {
     if(parseInt(element.substr(element.length - 10)) < parseInt(lowest))
       lowest = element.substr(element.length - 10)
   });
+  console.log('lowest: ' + lowest);
   if(lowest == myNumber) {
-    callback();
+    console.log('got lock on ' + path);
+    let lockNode = path;
+    callback(lockNode);
   }
   else {
-    zooExistsNotify(path, zooGetChildren(path, callback));
+    zooExistsNotify(path, lowest, callback);
   }
 }
 
@@ -782,10 +785,30 @@ function zooExists(path, callback) {
   });
 }
 
-function zooExistsNotify(path, callback) {
-  zooClient.exists(path, function (event) {
+function zooExistsAndCreate(path, callback) {
+  zooClient.exists(path, function (error, stat) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+
+    if (stat) {
+      //console.log('Node exists.');
+      callback();
+    } else {
+      console.log('Node does not exist. Creating');
+      zooCreate(path, callback);
+    }
+  });
+}
+
+function zooExistsNotify(path, lowest,  callback) {
+  let watchObj = '/' + path.split('/')[1] + '/' + path.split('/')[1] + lowest;
+  //console.log('watching ' + watchObj);
+  zooClient.exists(watchObj, function (event) {
     console.log('Got watcher event: %s', event);
     if(event.getType() == 2 && event.getPath().substr(event.getPath().length - 10) == lowest) {
+      //console.log('again ' + path);
       zooGetChildren(path, callback);
     }
   },function (error, stat) {
@@ -795,9 +818,9 @@ function zooExistsNotify(path, callback) {
     }
 
     if (stat) {
-      console.log('Node exists.');
+      console.log('Node exists. wait for event');
     } else {
-      console.log('Node does not exist.');
+      console.log('Node does not exist. That was fast');
       zooGetChildren(path, callback);
     }
   });
@@ -829,10 +852,20 @@ function zooCreateEfem(path, callback) {
         return;
       }
       console.log('Node: %s is created.', path);
-      //callback();
       zooGetChildren(path, callback);
     }
   );
+}
+
+function unlockNode(path) {
+  zooClient.remove(path, -1, function (error) {
+    if (error) {
+      console.log(error.stack);
+      return;
+    }
+
+    console.log('node ' + path + ' deleted');
+  });
 }
 
   /*zooClient.create(
