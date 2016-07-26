@@ -443,15 +443,16 @@ function treatMessage(message, db) {
 
 /******************Object Operations******************/
 
-function getObjects(key, type, next) {
+function getObjects(key, type, next, lockNode) {
+  console.log('lockNode at getObjects: ' + lockNode);
 
   if(next[0] == 'checkAndUpdate' || (next[0] == 'sync' && key != 'sentOps'))
     var data = '/' + key + '_tokens' + '/' + type;
   else var data = '/' + key + '/' + type;
 
-  zooExistsAndCreate('/' + key, function() {
+  zooExistsAndCreate('/' + key, lockNode, function(lockNode) {
 
-      zooCreateEfem('/' + key + '/' + key, function(lockNode) {
+      zooCreateEfem('/' + key + '/' + key, lockNode, function(lockNode) {
         http.get({
           host: 'localhost',
           port: 8088,
@@ -476,6 +477,7 @@ function getObjects(key, type, next) {
               case 'updateTime':
                 lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
                 lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                unlockNode(lockNode);
                 break;
               case 'checkAndUpdate':
                 //ver se o token já lá está
@@ -488,26 +490,28 @@ function getObjects(key, type, next) {
                 });
                 if(next[1] == 'add') {
                   if(!found)
-                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4], lockNode);
                   else console.log('duplicated add operation');
                 }
                 else if(next[1] == 'remove') {
                   if(found)
-                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4]);
+                    updateObjectsSnapshot(key, type, next[1], next[2], next[3], next[4], lockNode);
                   else console.log('duplicated remove operation');
                 }
                 break;
               case 'sync':
                 if(key == 'sentOps') {
+                  console.log('lockNode at sentOps: ' + lockNode);
                   let next2 = next;
                   next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-                  getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]]);
+                  getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]], lockNode);
                 }
                 else {
+                  console.log('lockNode at not sentOps: ' + lockNode);
                   let next1 = next;
                   next1[2] = key;
                   next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
-                  getObjects('sentOps', type, next1);
+                  getObjects('sentOps', type, next1, lockNode);
                 }
 
                 break;
@@ -520,7 +524,7 @@ function getObjects(key, type, next) {
   });
 }
 
-function updateObjects(key, type, op, elements) {
+function updateObjects(key, type, op, elements, lockNode) {
   var data = JSON.stringify({
     key: key,
     type: type,
@@ -548,6 +552,10 @@ function updateObjects(key, type, op, elements) {
       //commitTime += "";
       //sentOps[commitTime] = jsonResp;
       //console.log(sentOps);
+      if(key.endsWith('_tokens')){
+        console.log('unlocking ' + lockNode);
+        unlockNode(lockNode);
+      }
       return jsonResp;
     });
   });
@@ -556,7 +564,7 @@ function updateObjects(key, type, op, elements) {
   req.end();
 }
 
-function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
+function updateObjectsSnapshot(key, type, op, elements, tokens, vClock, lockNode) {
   //if( ((!(tokens in tokensLegionToAntidote)) && op == 'add')  ||  (tokens in tokensLegionToAntidote && op == 'remove') ) {
     if(!(key in storedObjects)) {
       storedObjects[key] = type;
@@ -597,7 +605,7 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
         //console.log(sentOps);
 
         //fazer correspondencia de token
-        getLogOps(key, type, vClock, ['token', commitTime, tokens, op]);
+        getLogOps(key, type, vClock, ['token', commitTime, tokens, op], lockNode);
         //return jsonResp;
       });
     });
@@ -608,8 +616,9 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock) {
 
 /******************Log Operations******************/
 
-function getLogOps(key, type, vClock, next) {
+function getLogOps(key, type, vClock, next, lockNode) {
   //console.log('vlock; ' + vClock);
+  console.log('lockNode at getLogOps: ' + lockNode);
   var data = '/' + key + '/' + type + '/' + JSON.stringify(vClock);
   http.get({
     host: 'localhost',
@@ -632,11 +641,11 @@ function getLogOps(key, type, vClock, next) {
             if (ops[i].opid_and_payload[1].clocksi_payload[4].commit_time[1] == next[1]) {
               if (next[3] == 'add'){
                 //tokensLegionToAntidote[next[2]] = ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
-                updateObjects(key + '_tokens', 'crdt_orset', 'add', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64);
+                updateObjects(key + '_tokens', 'crdt_orset', 'add', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64, lockNode);
               }
               else if (next[3] == 'remove') {
                 //delete tokensLegionToAntidote[next[2]];
-                updateObjects(key + '_tokens', 'crdt_orset', 'remove', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.remove[1][0].binary64);
+                updateObjects(key + '_tokens', 'crdt_orset', 'remove', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.remove[1][0].binary64, lockNode);
               }
               break;
 
@@ -649,7 +658,8 @@ function getLogOps(key, type, vClock, next) {
           //ver se a operação está nos sendOps, se nao está, fazer no legion
           let logOps = jsonResp.success.get_log_operations_resp[0].log_operations;
           if (Object.keys(logOps).length === 0) {
-            getObjects('objectID2', 'crdt_orset', ['updateTime']);
+            getObjects('objectID2', 'crdt_orset', ['updateTime'], lockNode);
+            //unlockNode(lockNode);
           }
           else {
             let sentOps = {};
@@ -679,7 +689,7 @@ function getLogOps(key, type, vClock, next) {
                   //console.log(opHist);
                   //console.log(JSON.stringify(obj.opHistory.map.ObjectServer.map[opHist[opHist.length-1]].result.unique));
                   let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique + " " + logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
-                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'add', token);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'add', token, lockNode);
                   //tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique] = logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
                 }
                 else if ('remove' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
@@ -691,13 +701,14 @@ function getLogOps(key, type, vClock, next) {
                   let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0] + ' ' + tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
                   console.log('token: ' + token);
                   console.log('key: ' + logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
-                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'remove', token);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'remove', token, lockNode);
                   //console.log('token: ' + token);
                   //delete tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
                 }
               }
               if (index === array.length - 1)
                 lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
+                unlockNode(lockNode);
             });
           }
           break;
@@ -785,21 +796,36 @@ function zooExists(path, callback) {
   });
 }
 
-function zooExistsAndCreate(path, callback) {
-  zooClient.exists(path, function (error, stat) {
-    if (error) {
-      console.log(error.stack);
-      return;
-    }
+function zooExistsAndCreate(path, lockNode,callback) {
+  if(path.split('/')[1] == 'sentOps') {
+    callback(lockNode);
+  }
+  else {
+    zooClient.exists(path, function (error, stat) {
+      if (error) {
+        console.log(error.stack);
+        return;
+      }
 
-    if (stat) {
-      //console.log('Node exists.');
-      callback();
-    } else {
-      console.log('Node does not exist. Creating');
-      zooCreate(path, callback);
-    }
-  });
+      if (stat) {
+        //console.log('Node exists.');
+        if(lockNode != null) {
+          callback(lockNode);
+        }
+        else {
+          callback(null);
+        }
+      } else {
+        console.log('Node does not exist. Creating');
+        if(lockNode != null) {
+          callback(path, lockNode, callback);
+        }
+        else {
+          zooCreate(path, null,callback);
+        }
+      }
+    });
+  }
 }
 
 function zooExistsNotify(path, lowest,  callback) {
@@ -826,7 +852,7 @@ function zooExistsNotify(path, lowest,  callback) {
   });
 }
 
-function zooCreate(path, callback) {
+function zooCreate(path, lockNode ,callback) {
   zooClient.create(
     path,
     new Buffer('data'),
@@ -836,25 +862,33 @@ function zooCreate(path, callback) {
         return;
       }
       console.log('Node: %s is created.', path);
-      callback();
+      callback(lockNode);
     }
   );
 }
 
-function zooCreateEfem(path, callback) {
-  zooClient.create(
-    path,
-    new Buffer('data'),
-    zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL,
-    function (error, path) {
-      if (error) {
-        console.log(error.stack);
-        return;
+function zooCreateEfem(path, lockNode, callback) {
+  if(path.split('/')[1] == 'sentOps') {
+    callback(lockNode);
+  }
+    else if(lockNode != null) {
+    callback(lockNode);
+  }
+  else {
+    zooClient.create(
+      path,
+      new Buffer('data'),
+      zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL,
+      function (error, path) {
+        if (error) {
+          console.log(error.stack);
+          return;
+        }
+        console.log('Node: %s is created.', path);
+        zooGetChildren(path, callback);
       }
-      console.log('Node: %s is created.', path);
-      zooGetChildren(path, callback);
-    }
-  );
+    );
+  }
 }
 
 function unlockNode(path) {
@@ -946,7 +980,7 @@ setTimeout(function(){setInterval(function(){
     //console.log(lastSeenTimestamp);
     //getLogOps(key, storedObjects[key], [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp], ['sync']);
     //usar o de baixo
-    getObjects(key, storedObjects[key], ['sync', [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]]);
+    getObjects(key, storedObjects[key], ['sync', [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]], null);
     //console.log('sentOps:');
     //console.log(sentOps);
     //console.log('tokensLegionToAntidote:');
