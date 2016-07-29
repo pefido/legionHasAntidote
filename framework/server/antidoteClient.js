@@ -409,17 +409,16 @@ function treatMessage(message, db) {
 
         case 'OP_ORSet':
           //console.log(message.content.operations);
-          switch(message.content.operations[0].opName) {
-            case 'add':
-              //return updateObjects(message.content .objectID, 'crdt_orset', 'add', message.content.operations[0].result.element);
-              //updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'add', message.content.operations[0].result.element, message.content.operations[0].result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]);
-              getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'add', message.content.operations[0].result.element, message.content.operations[0].result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
-              break;
-            case 'remove':
-              //updateObjectsSnapshot(message.content.objectID, 'crdt_orset', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]);
-              getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'remove', message.content.operations[0].result.element, message.content.operations[0].result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
-              break;
-          }
+          message.content.operations.forEach(function(element) {
+            switch(element.opName) {
+              case 'add':
+                getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'add', element.result.element, element.result.unique, [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
+                break;
+              case 'remove':
+                getObjects(message.content.objectID, 'crdt_orset', ['checkAndUpdate', 'remove', element.result.element, element.result.removes[0], [dcid[0], dcid[1], dcid[2], dcid[3], lastCommitTimestamp]]);
+                break;
+            }
+          });
           break;
 
         case 'OP_ORMap':
