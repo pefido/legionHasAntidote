@@ -972,7 +972,7 @@ function unlockNode(path) {
 
 /******************fetch updates from antidote from time to time******************/
 
-getObjects('objectID2', 'crdt_orset', ['firstTime']);
+getObjects('objectID2', 'crdt_orset', ['firstTime'], null);
 setTimeout(function(){setInterval(function(){
   Object.keys(storedObjects).forEach(function(key, index) {
     //console.log('key: ' + key + '; value: ' + storedObjects[key]);

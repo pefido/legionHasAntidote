@@ -170,8 +170,16 @@ CRDT_Database.prototype.saveToDisk = function () {
  * @param l_ret {Object}
  * @param dependencyVV {Object}
  */
-CRDT_Database.prototype.propagate = function (clientID, operationID, l_ret, dependencyVV) {
-    util.error("Not Implemented: propagate");
+CRDT_Database.prototype.propagate = function (objectID, clientID, operationID, options, objectType) {
+    var queuedOP = {
+        type: "OP",
+        clientID: clientID,
+        objectID: objectID,
+        operationID: operationID,
+        options: options,
+        objectType: objectType
+    };
+    this.peersQueue.push(queuedOP);
 };
 
 CRDT_Database.prototype.propagateMessage = function (message, extra) {
