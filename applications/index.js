@@ -7,6 +7,10 @@ var objectsDebug = false;
 var detailedDebug = false;
 var bullyLog = true;
 
+//var startTimer;
+//var endTimer;
+//var timers = [];
+
 console.log("Legion example.");
 console.log("Step 1 - Open various tabs.");
 console.log("Step 2 - run 'start(X)' at each tab, with X the tab number.");
@@ -106,6 +110,24 @@ function objects() {
         console.log("Delta Set change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(delta_set.getValue()));
     });*/
     op_set.setOnStateChange(function (updates, meta) {
+        /*if(!meta.local) {
+            if(timers.length < 50) {
+                endTimer = new Date();
+                console.log('op took: ');
+                let finalTime = endTimer.getTime() - startTimer.getTime();
+                timers.push(finalTime);
+                console.log(finalTime);
+                add(timers.length + 1);
+            }
+            else {
+                let sum = 0;
+                timers.forEach(function(element) {
+                    sum += element;
+                });
+                let median = sum/timers.length;
+                console.log('medium time is: ' + median);
+            }
+        }*/
         console.log("OP Set change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(op_set.getValue()));
     });
     /*op_map.setOnStateChange(function (updates, meta) {
@@ -147,6 +169,7 @@ function add(num) {
         return;
     }
     console.log("Adding.");
+    //startTimer = new Date();
     //counter_state.increment(legion.id, 1);
     //var rand = newRandomValue();
     op_set.add(num);

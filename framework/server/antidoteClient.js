@@ -479,6 +479,7 @@ function getObjects(key, type, next, lockNode) {
                 unlockNode(lockNode);
                 break;
               case 'checkAndUpdate':
+                checkUpdate(key, type);
                 //ver se o token já lá está
                 let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
                 let found = false;
@@ -552,7 +553,7 @@ function updateObjects(key, type, op, elements, lockNode) {
       //sentOps[commitTime] = jsonResp;
       //console.log(sentOps);
       if(key.endsWith('_tokens')){
-        console.log('unlocking ' + lockNode);
+        //console.log('unlocking ' + lockNode);
         unlockNode(lockNode);
       }
       return jsonResp;
@@ -741,7 +742,7 @@ function deleteNode(path) {
       return;
     }
 
-    console.log('Node is deleted.');
+    //console.log('Node is deleted.');
   });
 }
 
@@ -763,14 +764,14 @@ function zooGetChildren(path, callback) {
 function zooGetLock(path, children, callback) {
   let myNumber = path.substr(path.length - 10);
   let lowest = children[0].substr(children[0].length - 10);
-  console.log('myNumber: ' + myNumber);
+  //console.log('myNumber: ' + myNumber);
   children.forEach(function(element) {
     if(parseInt(element.substr(element.length - 10)) < parseInt(lowest))
       lowest = element.substr(element.length - 10)
   });
-  console.log('lowest: ' + lowest);
+  //console.log('lowest: ' + lowest);
   if(lowest == myNumber) {
-    console.log('got lock on ' + path);
+    //console.log('got lock on ' + path);
     let lockNode = path;
     callback(lockNode);
   }
@@ -831,7 +832,7 @@ function zooExistsNotify(path, lowest,  callback) {
   let watchObj = '/' + path.split('/')[1] + '/' + path.split('/')[1] + lowest;
   //console.log('watching ' + watchObj);
   zooClient.exists(watchObj, function (event) {
-    console.log('Got watcher event: %s', event);
+    //console.log('Got watcher event: %s', event);
     if(event.getType() == 2 && event.getPath().substr(event.getPath().length - 10) == lowest) {
       //console.log('again ' + path);
       zooGetChildren(path, callback);
@@ -860,7 +861,7 @@ function zooCreate(path, lockNode ,callback) {
         console.log(error.stack);
         return;
       }
-      console.log('Node: %s is created.', path);
+      //console.log('Node: %s is created.', path);
       callback(lockNode);
     }
   );
@@ -883,7 +884,7 @@ function zooCreateEfem(path, lockNode, callback) {
           console.log(error.stack);
           return;
         }
-        console.log('Node: %s is created.', path);
+        //console.log('Node: %s is created.', path);
         zooGetChildren(path, callback);
       }
     );
@@ -897,78 +898,9 @@ function unlockNode(path) {
       return;
     }
 
-    console.log('node ' + path + ' deleted');
+    //console.log('node ' + path + ' deleted');
   });
 }
-
-  /*zooClient.create(
-    '/locks/guid-lock-',
-    new Buffer('data'),
-    zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL,
-    function (error, path) {
-      if (error) {
-        console.log(error.stack);
-        return;
-      }
-
-      console.log('Node: %s is created.', path);
-
-      var haveLock = false;
-        getKids(haveLock, path);
-    }
-  );*/
-
-
-
-/*function getKids(lock1, path) {
- let haveLock = lock1;
- if(!haveLock) {
- zooClient.getChildren('/locks', function (error, children, stats) {
- console.log('aqui');
- if (error) {
- console.log(error.stack);
- return;
- }
- console.log('Children are: %j.', children);
- let lowest = children[0].substring(10);
- children.forEach(function (element) {
- let number = element.substring(10);
- if (parseInt(number) < parseInt(lowest))
- lowest = number;
- });
- let myNumber = path.substring(17);
- console.log('lowest: ' + lowest);
- console.log('myNumber: ' + myNumber);
- if (myNumber == lowest) {
- console.log('I have lock');
- haveLock = true;
- }
-
- if (!haveLock) {
- zooClient.exists('/locks/guid-lock-' + lowest, function (event) {
- console.log('Got watcher event: %s', event);
- if(event.getType() == 2 && event.getPath().substring(17) == lowest) {
- getKids(false, path);
- }
- }, function (error, stat) {
- if (error) {
- console.log(error.stack);
- return;
- }
-
- if (stat) {
- console.log('Node exists.');
- } else {
- console.log('Node does not exist.');
- }
- });
- }
- else {
- deleteNode(path);
- }
- });
- }
- }*/
 
 /******************fetch updates from antidote from time to time******************/
 
@@ -986,3 +918,72 @@ setTimeout(function(){setInterval(function(){
     //console.log(JSON.stringify(tokensLegionToAntidote));
   });
 }, 4000)}, 4500);
+
+
+/******************for testing******************/
+var counting = 0;
+var time1;
+var time2;
+var timers = [];
+var sum = 0;
+
+function checkUpdate(key, type) {
+  time1 = new Date();
+  let data = '/' + key + '/' + type;
+  http.get({
+    host: 'localhost',
+    port: 8088,
+    path: '/getObjects' + data
+  }, function(response) {
+    let body = '';
+    response.on('data', function(chunk) {
+      body += chunk;
+    });
+    response.on('end', function() {
+      //console.log(body);
+      let jsonBody = JSON.parse(body);
+      if(jsonBody.success.get_objects_resp[0].object_and_clock[0].orset.length > counting) {
+        counting++;
+
+        time2 = new Date();
+        let finalTime = time2.getTime() - time1.getTime();
+        timers.push(finalTime);
+        console.log('the op took: ' + finalTime + ' ms');
+        sum += finalTime;
+        let mean = sum / timers.length;
+        console.log('the mean is: ' + mean + ' ms');
+
+        /*let data = JSON.stringify({
+          key: key,
+          type: type,
+          op: 'add',
+          elements: counting + '' + counting
+        });
+
+        let req = http.request({
+          host: 'localhost',
+          port: 8088,
+          path: '/updateObjects',
+          method: 'PUT'
+        }, function(response) {
+          let body = '';
+          response.on('data', function(chunk) {
+            body += chunk;
+          });
+          response.on('end', function() {
+            let jsonResp = JSON.parse(body);
+            getObjects(key, storedObjects[key], ['sync', [dcid[0], dcid[1], dcid[2], dcid[3], lastSeenTimestamp]], null);
+          });
+        });
+
+        req.write(data);
+        req.end();*/
+      }
+      else {
+        checkUpdate(key, type);
+      }
+
+
+    })
+  });
+}
