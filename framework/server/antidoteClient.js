@@ -479,7 +479,7 @@ function getObjects(key, type, next, lockNode) {
                 unlockNode(lockNode);
                 break;
               case 'checkAndUpdate':
-                checkUpdate(key, type);
+                //checkUpdate(key, type);
                 //ver se o token já lá está
                 let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
                 let found = false;
@@ -846,7 +846,7 @@ function zooExistsNotify(path, lowest,  callback) {
     if (stat) {
       //console.log('Node exists. wait for event');
     } else {
-      console.log('Node does not exist. That was fast');
+      //console.log('Node does not exist. That was fast');
       zooGetChildren(path, callback);
     }
   });
@@ -917,7 +917,7 @@ setTimeout(function(){setInterval(function(){
     //console.log('tokensLegionToAntidote:');
     //console.log(JSON.stringify(tokensLegionToAntidote));
   });
-}, 4000)}, 4500);
+}, 50)}, 4500);
 
 
 /******************for testing******************/

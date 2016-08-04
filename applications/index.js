@@ -110,8 +110,10 @@ function objects() {
         console.log("Delta Set change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(delta_set.getValue()));
     });*/
     op_set.setOnStateChange(function (updates, meta) {
-        /*if(!meta.local) {
-            if(timers.length < 50) {
+        if(!meta.local) {
+            time2 = new Date();
+            console.log('time2: ' + time2.getTime());
+            /*if(timers.length < 50) {
                 endTimer = new Date();
                 console.log('op took: ');
                 let finalTime = endTimer.getTime() - startTimer.getTime();
@@ -126,8 +128,8 @@ function objects() {
                 });
                 let median = sum/timers.length;
                 console.log('medium time is: ' + median);
-            }
-        }*/
+            }*/
+        }
         console.log("OP Set change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(op_set.getValue()));
     });
     /*op_map.setOnStateChange(function (updates, meta) {
