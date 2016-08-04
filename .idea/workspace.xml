@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="fc4d3c89-fe33-4a09-a298-03c97b587409" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/applications/index.js" afterPath="$PROJECT_DIR$/applications/index.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/framework/server/antidoteClient.js" afterPath="$PROJECT_DIR$/framework/server/antidoteClient.js" />
     </list>
     <ignored path="Legion.iws" />
@@ -55,21 +54,21 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="antidoteClient.js" pinned="false" current-in-tab="true">
+      <file leaf-file-name="antidoteClient.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/framework/server/antidoteClient.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.50163937">
-              <caret line="919" column="5" selection-start-line="919" selection-start-column="5" selection-end-line="919" selection-end-column="5" />
+            <state vertical-scroll-proportion="0.0">
+              <caret line="919" column="4" selection-start-line="919" selection-start-column="4" selection-end-line="919" selection-end-column="4" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="index.js" pinned="false" current-in-tab="false">
+      <file leaf-file-name="index.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/applications/index.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="112" column="25" selection-start-line="112" selection-start-column="25" selection-end-line="112" selection-end-column="25" />
+            <state vertical-scroll-proportion="0.50163937">
+              <caret line="113" column="17" selection-start-line="113" selection-start-column="17" selection-end-line="113" selection-end-column="17" />
               <folding />
             </state>
           </provider>
@@ -116,8 +115,8 @@
         <option value="$PROJECT_DIR$/framework/server/ObjectsServer.js" />
         <option value="$PROJECT_DIR$/framework/client/objectStore.js" />
         <option value="$PROJECT_DIR$/framework/server/CRDT_Database.js" />
-        <option value="$PROJECT_DIR$/applications/index.js" />
         <option value="$PROJECT_DIR$/framework/server/antidoteClient.js" />
+        <option value="$PROJECT_DIR$/applications/index.js" />
       </list>
     </option>
   </component>
@@ -755,18 +754,18 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/applications/index.js">
+    <entry file="file://$PROJECT_DIR$/framework/server/antidoteClient.js">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="112" column="25" selection-start-line="112" selection-start-column="25" selection-end-line="112" selection-end-column="25" />
+          <caret line="919" column="4" selection-start-line="919" selection-start-column="4" selection-end-line="919" selection-end-column="4" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/framework/server/antidoteClient.js">
+    <entry file="file://$PROJECT_DIR$/applications/index.js">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.50163937">
-          <caret line="919" column="5" selection-start-line="919" selection-start-column="5" selection-end-line="919" selection-end-column="5" />
+          <caret line="113" column="17" selection-start-line="113" selection-start-column="17" selection-end-line="113" selection-end-column="17" />
           <folding />
         </state>
       </provider>

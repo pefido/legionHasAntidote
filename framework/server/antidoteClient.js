@@ -917,7 +917,7 @@ setTimeout(function(){setInterval(function(){
     //console.log('tokensLegionToAntidote:');
     //console.log(JSON.stringify(tokensLegionToAntidote));
   });
-}, 50)}, 4500);
+}, 5)}, 4500);
 
 
 /******************for testing******************/
