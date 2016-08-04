@@ -443,7 +443,7 @@ function treatMessage(message, db) {
 /******************Object Operations******************/
 
 function getObjects(key, type, next, lockNode) {
-  console.log('lockNode at getObjects: ' + lockNode);
+  //console.log('lockNode at getObjects: ' + lockNode);
 
   if(next[0] == 'checkAndUpdate' || (next[0] == 'sync' && key != 'sentOps'))
     var data = '/' + key + '_tokens' + '/' + type;
@@ -501,13 +501,13 @@ function getObjects(key, type, next, lockNode) {
                 break;
               case 'sync':
                 if(key == 'sentOps') {
-                  console.log('lockNode at sentOps: ' + lockNode);
+                  //console.log('lockNode at sentOps: ' + lockNode);
                   let next2 = next;
                   next2[4] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
                   getLogOps(next2[2], type, next2[1], [next2[0], next2[3], next2[4]], lockNode);
                 }
                 else {
-                  console.log('lockNode at not sentOps: ' + lockNode);
+                  //console.log('lockNode at not sentOps: ' + lockNode);
                   let next1 = next;
                   next1[2] = key;
                   next1[3] = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
@@ -618,7 +618,7 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock, lockNode
 
 function getLogOps(key, type, vClock, next, lockNode) {
   //console.log('vlock; ' + vClock);
-  console.log('lockNode at getLogOps: ' + lockNode);
+  //console.log('lockNode at getLogOps: ' + lockNode);
   var data = '/' + key + '/' + type + '/' + JSON.stringify(vClock);
   http.get({
     host: 'localhost',
@@ -654,7 +654,7 @@ function getLogOps(key, type, vClock, next, lockNode) {
           break;
         case 'sync':
           //console.log('YO');
-          console.log(JSON.stringify(jsonResp));
+          //console.log(JSON.stringify(jsonResp));
           //ver se a operação está nos sendOps, se nao está, fazer no legion
           let logOps = jsonResp.success.get_log_operations_resp[0].log_operations;
           if (Object.keys(logOps).length === 0) {
@@ -671,8 +671,8 @@ function getLogOps(key, type, vClock, next, lockNode) {
               let tokens = element.element[0].json_value.split(" ");
               tokensLegionToAntidote[tokens[0]] = tokens[1];
             });
-            console.log('tokens:');
-            console.log(JSON.stringify(tokensLegionToAntidote));
+            //console.log('tokens:');
+            //console.log(JSON.stringify(tokensLegionToAntidote));
 
             //let sentOps = next[4];
             //let tokensLegionToAntidote = next[3];
@@ -738,7 +738,7 @@ function getLastCommitTimestamp() {
 function deleteNode(path) {
   zooClient.remove(path, -1, function (error) {
     if (error) {
-      console.log(error.stack);
+      //console.log(error.stack);
       return;
     }
 
@@ -844,7 +844,7 @@ function zooExistsNotify(path, lowest,  callback) {
     }
 
     if (stat) {
-      console.log('Node exists. wait for event');
+      //console.log('Node exists. wait for event');
     } else {
       console.log('Node does not exist. That was fast');
       zooGetChildren(path, callback);
@@ -894,7 +894,7 @@ function zooCreateEfem(path, lockNode, callback) {
 function unlockNode(path) {
   zooClient.remove(path, -1, function (error) {
     if (error) {
-      console.log(error.stack);
+      //console.log(error.stack);
       return;
     }
 
