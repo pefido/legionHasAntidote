@@ -479,7 +479,7 @@ function getObjects(key, type, next, lockNode) {
                 unlockNode(lockNode);
                 break;
               case 'checkAndUpdate':
-                checkUpdate(key, type);
+                //checkUpdate(key, type);
                 //ver se o token já lá está
                 let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
                 let found = false;
