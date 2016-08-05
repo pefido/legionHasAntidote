@@ -619,6 +619,7 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock, lockNode
 function getLogOps(key, type, vClock, next, lockNode) {
   //console.log('vlock; ' + vClock);
   //console.log('lockNode at getLogOps: ' + lockNode);
+  //var timeLog1 = new Date();
   var data = '/' + key + '/' + type + '/' + JSON.stringify(vClock);
   http.get({
     host: 'localhost',
@@ -683,6 +684,9 @@ function getLogOps(key, type, vClock, next, lockNode) {
                 //sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]] = logOps[key].opid_and_payload;
                 let obj = legionDb.getCRDT(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
                 if ('add' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
+                  //console.log('logTime1: ' + timeLog1.getTime());
+                  //let logTime2 = new Date();
+                  //console.log('logTime1: ' + logTime2.getTime());
                   obj.add(logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[0].json_value);
                   console.log('OBJ');
                   let opHist = Object.keys(obj.opHistory.map.ObjectServer.map);
@@ -917,10 +921,12 @@ setTimeout(function(){setInterval(function(){
     //console.log('tokensLegionToAntidote:');
     //console.log(JSON.stringify(tokensLegionToAntidote));
   });
-}, 5)}, 4500);
+}, 500)}, 4500);
 
 
 /******************for testing******************/
+var timeLog;
+
 var counting = 0;
 var time1;
 var time2;
@@ -928,7 +934,6 @@ var timers = [];
 var sum = 0;
 
 function checkUpdate(key, type) {
-  time1 = new Date();
   let data = '/' + key + '/' + type;
   http.get({
     host: 'localhost',

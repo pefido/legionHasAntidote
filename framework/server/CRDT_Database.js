@@ -12,7 +12,7 @@ if (typeof exports != "undefined") {
 
 function CRDT_Database(messaging, peerSyncs) {
     var cb = this;
-    this.peerSendInterval = 2000;
+    this.peerSendInterval = 500;
     this.peersQueue = new ALQueue();
 
     this.messagingAPI = messaging;
