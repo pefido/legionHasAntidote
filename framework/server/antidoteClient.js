@@ -943,15 +943,16 @@ function checkUpdate(key, type) {
       //console.log(body);
       let jsonBody = JSON.parse(body);
       if(jsonBody.success.get_objects_resp[0].object_and_clock[0].orset.length > counting) {
-        counting++;
+        counting = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset.length;
 
         time2 = new Date();
-        let finalTime = time2.getTime() - time1.getTime();
-        timers.push(finalTime);
-        console.log('the op took: ' + finalTime + ' ms');
-        sum += finalTime;
-        let mean = sum / timers.length;
-        console.log('the mean is: ' + mean + ' ms');
+        //let finalTime = time2.getTime() - time1.getTime();
+        //timers.push(finalTime);
+        //console.log('the op took: ' + finalTime + ' ms');
+        //sum += finalTime;
+        //let mean = sum / timers.length;
+        //console.log('the mean is: ' + mean + ' ms');
+        console.log('op ended at: ' + time2.getTime());
 
         /*let data = JSON.stringify({
           key: key,

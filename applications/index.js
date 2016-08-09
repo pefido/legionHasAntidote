@@ -7,7 +7,7 @@ var objectsDebug = false;
 var detailedDebug = false;
 var bullyLog = true;
 
-//var startTimer;
+var startTimer;
 //var endTimer;
 //var timers = [];
 
@@ -169,7 +169,8 @@ function add(num) {
         return;
     }
     console.log("Adding.");
-    //startTimer = new Date();
+    startTimer = new Date();
+    console.log('started at: ' + startTimer.getTime());
     //counter_state.increment(legion.id, 1);
     //var rand = newRandomValue();
     op_set.add(num);
