@@ -112,7 +112,7 @@ function objects() {
     op_set.setOnStateChange(function (updates, meta) {
         if(!meta.local) {
             time2 = new Date();
-            console.log('time2: ' + time2.getTime());
+            console.log('op received at: ' + time2.getTime());
             /*if(timers.length < 50) {
                 endTimer = new Date();
                 console.log('op took: ');

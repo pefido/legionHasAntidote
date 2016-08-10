@@ -24,6 +24,7 @@ var op_orset = {
             add: {
                 local: function (element) {
                     var unique = generateUniqueIdentifier();
+                    console.log('unique: ' + unique);
                     return {element: element, unique: unique};
                 },
                 remote: function (data) {
