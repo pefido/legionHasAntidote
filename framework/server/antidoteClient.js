@@ -713,10 +713,10 @@ function getLogOps(key, type, vClock, next, lockNode) {
               }
               else unlockNode(lockNode);
 
-              if (index === array.length - 1){
+              if (index === array.length - 1) {
                 lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
-                //lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[5].txid[0].json_value;
               }
+
             });
           }
           break;
