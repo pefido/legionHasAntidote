@@ -38,3 +38,7 @@
 ehthumbs.db
 Thumbs.db
 llcproto.pem
+
+# webStorm files #
+######################
+.idea/

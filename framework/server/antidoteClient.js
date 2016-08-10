@@ -479,7 +479,7 @@ function getObjects(key, type, next, lockNode) {
                 unlockNode(lockNode);
                 break;
               case 'checkAndUpdate':
-                checkUpdate(key, type);
+                //checkUpdate(key, type);
                 //ver se o token já lá está
                 let tokens = jsonBody.success.get_objects_resp[0].object_and_clock[0].orset;
                 let found = false;
@@ -658,8 +658,8 @@ function getLogOps(key, type, vClock, next, lockNode) {
           //ver se a operação está nos sendOps, se nao está, fazer no legion
           let logOps = jsonResp.success.get_log_operations_resp[0].log_operations;
           if (Object.keys(logOps).length === 0) {
-            getObjects('objectID2', 'crdt_orset', ['updateTime'], lockNode);
-            //unlockNode(lockNode);
+            unlockNode(lockNode);
+            //getObjects('objectID2', 'crdt_orset', ['updateTime'], lockNode);
           }
           else {
             let sentOps = {};
@@ -706,9 +706,12 @@ function getLogOps(key, type, vClock, next, lockNode) {
                   //delete tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
                 }
               }
-              if (index === array.length - 1)
+              else unlockNode(lockNode);
+
+              if (index === array.length - 1) {
                 lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
-                unlockNode(lockNode);
+              }
+
             });
           }
           break;
