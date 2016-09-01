@@ -405,6 +405,7 @@ function treatMessage(message, db) {
       switch(crdtType) {
         case 'STATE_Counter':
           //update state
+          console.log("looks like we have a counter here");
           break;
 
         case 'OP_ORSet':

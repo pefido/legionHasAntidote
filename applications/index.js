@@ -79,7 +79,7 @@ var newRandomValue = function () {
     return "randVal" + ("" + Math.random()).substr(2, 2);
 };
 
-//var counter_state;
+var counter_state;
 var op_set;
 //var op_map;
 //var state_set;
@@ -88,21 +88,21 @@ var op_set;
 function objects() {
     objectStore = legion.getObjectStore();
 
-    //objectStore.defineCRDT(CRDT_LIB.STATE_Counter);
+    objectStore.defineCRDT(CRDT_LIB.STATE_Counter);
     objectStore.defineCRDT(CRDT_LIB.OP_ORSet);
     //objectStore.defineCRDT(CRDT_LIB.OP_ORMap);
     //objectStore.defineCRDT(CRDT_LIB.STATE_Set);
     //objectStore.defineCRDT(CRDT_LIB.DELTA_Set);
 
-    //counter_state = objectStore.get("objectID1", CRDT_LIB.STATE_Counter.type);
+    counter_state = objectStore.get("objectID1", CRDT_LIB.STATE_Counter.type);
     op_set = objectStore.get("objectID2", CRDT_LIB.OP_ORSet.type);
     //op_map = objectStore.get("objectID3", CRDT_LIB.OP_ORMap.type);
     //state_set = objectStore.get("objectID4", CRDT_LIB.STATE_Set.type);
     //delta_set = objectStore.get("objectID5", CRDT_LIB.DELTA_Set.type);
 
-    /*counter_state.setOnStateChange(function (updates, meta) {
+    counter_state.setOnStateChange(function (updates, meta) {
         console.log("State Counter change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(counter_state.getValue()));
-    });*/
+    });
     /*state_set.setOnStateChange(function (updates, meta) {
         console.log("State Set change: " + JSON.stringify(updates) + " " + JSON.stringify(meta) + " value: " + JSON.stringify(state_set.getValue()));
     });
@@ -170,7 +170,7 @@ function add(num) {
     }
     console.log("Adding.");
     //startTimer = new Date();
-    //counter_state.increment(legion.id, 1);
+    counter_state.increment(legion.id, num);
     //var rand = newRandomValue();
     op_set.add(num);
     //state_set.add(rand);
@@ -187,7 +187,7 @@ function remove(num) {
     /*var rem = op_set.getValue()[0];
     if (rem)*/
         op_set.remove(num);
-    //counter_state.decrement(legion.id, 1);
+    counter_state.decrement(legion.id, num);
 
     /*var state_set_rem = state_set.getValue()[0];
     if (state_set_rem)
@@ -204,7 +204,7 @@ function remove(num) {
 
 function printvalues() {
     console.log(op_set.getValue());
-    //console.log(counter_state.getValue());
+    console.log(counter_state.getValue());
     //console.log(op_map.getValue());
     //console.log(state_set.getValue());
     //console.log(delta_set.getValue());
