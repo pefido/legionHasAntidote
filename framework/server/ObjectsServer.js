@@ -57,7 +57,7 @@ function initService() {
 
         wss.on('connection', function (socket) {
                 var os = {
-                    id: "localhost:8004",
+                    id: "localhost:8005",
                     messageCount: 0
                 };
 
