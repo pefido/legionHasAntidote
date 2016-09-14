@@ -43,11 +43,11 @@ function start(clientID) {
         },
         signallingConnection: {
             type: ServerConnection,
-            server: {ip: "localhost", port: 8002}
+            server: {ip: "localhost", port: 8003}
         },
         objectServerConnection: {
             type: ObjectServerConnection,
-            server: {ip: "localhost", port: 8004}
+            server: {ip: "localhost", port: 8005}
         }
     };
 

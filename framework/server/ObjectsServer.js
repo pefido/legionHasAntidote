@@ -1,4 +1,4 @@
-var PORT = 8004;
+var PORT = 8005;
 
 var PeerSync = require('./../shared/peerSync.js').PeerSync;
 var CRDT_Database = require('./CRDT_Database.js').CRDT_Database;
@@ -57,7 +57,7 @@ function initService() {
 
         wss.on('connection', function (socket) {
                 var os = {
-                    id: "localhost:8004",
+                    id: "localhost:8005",
                     messageCount: 0
                 };
 
