@@ -1,4 +1,4 @@
-var PORT = 8004;
+var PORT = 8005;
 
 var PeerSync = require('./../shared/peerSync.js').PeerSync;
 var CRDT_Database = require('./CRDT_Database.js').CRDT_Database;
