@@ -405,6 +405,7 @@ function treatMessage(message, db) {
       switch(crdtType) {
         case 'STATE_Counter':
           //update state
+          console.log("looks like we have a counter here");
           break;
 
         case 'OP_ORSet':
@@ -472,6 +473,8 @@ function getObjects(key, type, next, lockNode) {
                 console.log(dcid);
                 lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
                 lastCommitTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
+                //lastSeenTimestamp = 0;
+                //lastCommitTimestamp = 0;
                 break;
               case 'updateTime':
                 lastSeenTimestamp = jsonBody.success.get_objects_resp[0].object_and_clock[1].vectorclock[0].dcid_and_time[1];
@@ -485,7 +488,7 @@ function getObjects(key, type, next, lockNode) {
                 let found = false;
                 tokens.forEach(function(element, index, array) {
                   let token = element.element[0].json_value.split(" ");
-                  if(token[0] == next[3])
+                  if(token[0] == next[3] && token[2] == legionDb.id)
                     found = true;
                 });
                 if(next[1] == 'add') {
@@ -595,13 +598,15 @@ function updateObjectsSnapshot(key, type, op, elements, tokens, vClock, lockNode
         let jsonResp = JSON.parse(body);
         //console.log(jsonResp);
         let commitTime = jsonResp.success.commit_resp.vectorclock[0].dcid_and_time[1];
+        console.log('commitTimeSnap: ' + commitTime);
+        console.log('lastSeen: ' + lastSeenTimestamp);
         //console.log(commitTime);
         //lastSeenTimestamp = commitTime + 1;
         //sentOps.push(commitTime);
         //sentOps[commitTime] = jsonResp;
-        updateObjects('sentOps', 'crdt_orset', 'add', commitTime);
+        updateObjects('sentOps', 'crdt_orset', 'add', commitTime + " " + legionDb.id);
 
-        lastCommitTimestamp = commitTime;
+        //lastCommitTimestamp = commitTime;
         //console.log(sentOps);
 
         //fazer correspondencia de token
@@ -638,14 +643,17 @@ function getLogOps(key, type, vClock, next, lockNode) {
           let ops = jsonResp.success.get_log_operations_resp[0].log_operations;
           let found = false;
           for (i = 0; i < ops.length; i++) {
+            //let commitAndId = ops[i].opid_and_payload[1].clocksi_payload[4].commit_time[1].split(" ");
             if (ops[i].opid_and_payload[1].clocksi_payload[4].commit_time[1] == next[1]) {
+              lastSeenTimestamp = ops[i].opid_and_payload[1].clocksi_payload[3].snapshot_time.vectorclock[0].dcid_and_time[1];
+              lastCommitTimestamp = ops[i].opid_and_payload[1].clocksi_payload[4].commit_time[1];
               if (next[3] == 'add'){
                 //tokensLegionToAntidote[next[2]] = ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
-                updateObjects(key + '_tokens', 'crdt_orset', 'add', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64, lockNode);
+                updateObjects(key + '_tokens', 'crdt_orset', 'add', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64 + ' ' + legionDb.id, lockNode);
               }
               else if (next[3] == 'remove') {
                 //delete tokensLegionToAntidote[next[2]];
-                updateObjects(key + '_tokens', 'crdt_orset', 'remove', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.remove[1][0].binary64, lockNode);
+                updateObjects(key + '_tokens', 'crdt_orset', 'remove', next[2] + ' ' + ops[i].opid_and_payload[1].clocksi_payload[2].update.remove[1][0].binary64 + ' ' + legionDb.id, lockNode);
               }
               break;
 
@@ -665,11 +673,12 @@ function getLogOps(key, type, vClock, next, lockNode) {
             let sentOps = {};
             let tokensLegionToAntidote = {};
             next[2].forEach(function(element, index, array) {
-              sentOps[element.element[0].json_value] = element.element[0].json_value;
+              let op = element.element[0].json_value.split(" ");
+              sentOps[op[0]] = op[1];
             });
             next[1].forEach(function(element, index, array) {
               let tokens = element.element[0].json_value.split(" ");
-              tokensLegionToAntidote[tokens[0]] = tokens[1];
+              tokensLegionToAntidote[tokens[0]] = [tokens[1], tokens[2]];
             });
             //console.log('tokens:');
             //console.log(JSON.stringify(tokensLegionToAntidote));
@@ -677,10 +686,25 @@ function getLogOps(key, type, vClock, next, lockNode) {
             //let sentOps = next[4];
             //let tokensLegionToAntidote = next[3];
             Object.keys(logOps).forEach(function (key, index, array) {
-              if (!(logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] in sentOps)) {
+              let go = false;
+              if ( !(logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] in sentOps) ) {
+                console.log('go with first');
+                go = true;
+              } else if(logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] in sentOps) {
+                console.log('aqui ' + sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]]);
+                if(sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]] != legionDb.id) {
+                  console.log('go with second');
+                  go = true;
+                }
+              }
+              console.log('go is: ' + go);
+              console.log('with ' + logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]);
+              console.log('and ' + sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]]);
+                if(go) {
                 console.log('fazer \n' + JSON.stringify(logOps[key].opid_and_payload[1].clocksi_payload[2].update));
-                updateObjects('sentOps', type, 'add', logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]);
+                updateObjects('sentOps', type, 'add', logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1] + " " + legionDb.id);
                 //sentOps[logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1]] = logOps[key].opid_and_payload;
+                console.log('get crdt: ' + logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
                 let obj = legionDb.getCRDT(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
                 if ('add' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
                   obj.add(logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[0].json_value);
@@ -689,7 +713,7 @@ function getLogOps(key, type, vClock, next, lockNode) {
                   //console.log(opHist);
                   //console.log(JSON.stringify(obj.opHistory.map.ObjectServer.map[opHist[opHist.length-1]].result.unique));
                   let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique + " " + logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
-                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'add', token, lockNode);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'add', token + " " + legionDb.id, lockNode);
                   //tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.unique] = logOps[key].opid_and_payload[1].clocksi_payload[2].update.add[1][0].binary64;
                 }
                 else if ('remove' in logOps[key].opid_and_payload[1].clocksi_payload[2].update) {
@@ -698,10 +722,10 @@ function getLogOps(key, type, vClock, next, lockNode) {
                   console.log(JSON.stringify(obj.opHistory.map.ObjectServer.map));
                   let opHist = Object.keys(obj.opHistory.map.ObjectServer.map);
                   console.log('token to remove : ' + obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]);
-                  let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0] + ' ' + tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
+                  let token = obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0] + ' ' + tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]][0];
                   console.log('token: ' + token);
                   console.log('key: ' + logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value);
-                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'remove', token, lockNode);
+                  updateObjects(logOps[key].opid_and_payload[1].clocksi_payload[0].key.json_value + '_tokens', type, 'remove', token + " " + legionDb.id, lockNode);
                   //console.log('token: ' + token);
                   //delete tokensLegionToAntidote[obj.opHistory.map.ObjectServer.map[opHist[opHist.length - 1]].result.removes[0]];
                 }
@@ -709,7 +733,9 @@ function getLogOps(key, type, vClock, next, lockNode) {
               else unlockNode(lockNode);
 
               if (index === array.length - 1) {
-                lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
+                console.log(logOps[key]);
+                lastCommitTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[4].commit_time[1];
+                lastSeenTimestamp = logOps[key].opid_and_payload[1].clocksi_payload[3].snapshot_time.vectorclock[0].dcid_and_time[1]+1;
               }
 
             });

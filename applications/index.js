@@ -188,7 +188,7 @@ function remove(num) {
     /*var rem = op_set.getValue()[0];
     if (rem)*/
         op_set.remove(num);
-    //counter_state.decrement(legion.id, 1);
+    //counter_state.decrement(legion.id, num);
 
     /*var state_set_rem = state_set.getValue()[0];
     if (state_set_rem)
